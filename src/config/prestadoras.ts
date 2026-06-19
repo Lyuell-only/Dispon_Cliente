@@ -1,56 +1,129 @@
 // ============================================================================
-//  Configuração de PRESTADORAS e REGRAS DE SUGESTÃO
+//  Configuração de PRESTADORAS, CIDADES, CATEGORIAS/TIPOS e REGRAS DE SUGESTÃO
 //
-//  Edite este arquivo para incluir as prestadoras (empresas que recebem as OS)
-//  e as regras de "qual prestadora sugerir" de acordo com a CIDADE + TIPO de OS.
-//  Após editar, basta publicar novamente (o GitHub Actions faz o deploy).
+//  Edite este arquivo para manter os dados. Após editar, basta publicar (o
+//  GitHub Actions builda e publica automaticamente).
 // ============================================================================
 
 export type Prestadora = {
-  /** Identificador único e estável (use em REGRAS e no perfil do usuário EMPRESA). */
+  /** Identificador único e estável (usado nas regras e no perfil da EMPRESA). */
   id: string;
   nome: string;
 };
 
+export type Categoria = {
+  nome: string;
+  tipos: string[];
+};
+
 export type RegraSugestao = {
-  /** Cidade atendida. Comparação sem acento e sem diferenciar maiúsculas. */
   cidade: string;
-  /** Tipo de OS. Deixe ausente/"*" para valer para qualquer tipo na cidade. */
-  tipo?: string;
-  /** Id da prestadora sugerida. */
-  prestadoraId: string;
+  /** Categoria da OS: "Ativação", "Manutenção", etc. */
+  categoria: string;
+  /** Prestadoras sugeridas (a primeira é a preferida; as demais ficam como alternativa). */
+  prestadoraIds: string[];
 };
 
 // ---------------------------------------------------------------------------
-//  Tipos de OS disponíveis no formulário
-// ---------------------------------------------------------------------------
-export const TIPOS_OS: string[] = [
-  "Instalação",
-  "Manutenção",
-  "Reparo",
-  "Vistoria",
-  "Retirada",
-];
-
-// ---------------------------------------------------------------------------
-//  Prestadoras (exemplos — substitua pelos reais)
+//  Prestadoras (empresas que recebem as OS)
 // ---------------------------------------------------------------------------
 export const PRESTADORAS: Prestadora[] = [
-  { id: "prest-norte", nome: "Prestadora Norte" },
-  { id: "prest-sul", nome: "Prestadora Sul" },
-  { id: "prest-central", nome: "Prestadora Central" },
+  { id: "fabio", nome: "Fabio Telecom" },
+  { id: "gm", nome: "GM Serviços" },
+  { id: "future", nome: "Future Telecom" },
+  { id: "vb", nome: "VB Instalações" },
+  { id: "fmat", nome: "FMAT Telecom" },
+  { id: "vwm", nome: "VWM Telecom" },
+  { id: "andrade", nome: "Andrade Telecom" },
+  { id: "pap", nome: "PAP Serviços" },
+  { id: "gleison", nome: "Gleison Telecom" },
 ];
 
 // ---------------------------------------------------------------------------
-//  Regras de sugestão (exemplos — substitua pelos reais)
-//  A primeira regra que casar cidade + tipo vence; se não houver, tenta uma
-//  regra só por cidade (tipo "*").
+//  Cidades atendidas
+// ---------------------------------------------------------------------------
+export const CIDADES: string[] = [
+  "Igarapé",
+  "São Joaquim de Bicas",
+  "Betim",
+  "Contagem",
+  "Esmeraldas",
+  "Mateus Leme",
+  "Juatuba",
+  "Itaúna",
+  "Florestal",
+  "Crucilândia",
+  "Piracema",
+  "Itaguara",
+];
+
+// ---------------------------------------------------------------------------
+//  Categorias e tipos de OS
+// ---------------------------------------------------------------------------
+export const CATEGORIAS: Categoria[] = [
+  {
+    nome: "Ativação",
+    tipos: ["Instalação", "Instalação PME", "Mudança de endereço"],
+  },
+  {
+    nome: "Manutenção",
+    tipos: [
+      "Suporte",
+      "Suporte Retenção",
+      "Suporte Especializado",
+      "Suporte Garantia",
+    ],
+  },
+  {
+    nome: "Agregados",
+    tipos: ["Ponto de rede", "Ativação STFC", "Mudança de cômodo", "Upgrade"],
+  },
+  {
+    nome: "Outros",
+    tipos: ["Outro"],
+  },
+];
+
+// ---------------------------------------------------------------------------
+//  Regras de sugestão (cidade + categoria -> prestadoras)
+//  Categorias "Agregados" e "Outros" não têm regra -> sem sugestão automática.
 // ---------------------------------------------------------------------------
 export const REGRAS_SUGESTAO: RegraSugestao[] = [
-  { cidade: "São Paulo", tipo: "Instalação", prestadoraId: "prest-central" },
-  { cidade: "São Paulo", prestadoraId: "prest-central" },
-  { cidade: "Campinas", prestadoraId: "prest-sul" },
-  { cidade: "Manaus", prestadoraId: "prest-norte" },
+  { cidade: "Igarapé", categoria: "Ativação", prestadoraIds: ["gleison", "future"] },
+  { cidade: "Igarapé", categoria: "Manutenção", prestadoraIds: ["gm"] },
+
+  { cidade: "São Joaquim de Bicas", categoria: "Ativação", prestadoraIds: ["andrade"] },
+  { cidade: "São Joaquim de Bicas", categoria: "Manutenção", prestadoraIds: ["fmat"] },
+
+  { cidade: "Betim", categoria: "Ativação", prestadoraIds: ["gm"] },
+  { cidade: "Betim", categoria: "Manutenção", prestadoraIds: ["vb"] },
+
+  { cidade: "Contagem", categoria: "Ativação", prestadoraIds: ["gm"] },
+  { cidade: "Contagem", categoria: "Manutenção", prestadoraIds: ["vb"] },
+
+  { cidade: "Esmeraldas", categoria: "Ativação", prestadoraIds: ["gm"] },
+  { cidade: "Esmeraldas", categoria: "Manutenção", prestadoraIds: ["vb"] },
+
+  { cidade: "Mateus Leme", categoria: "Ativação", prestadoraIds: ["vwm"] },
+  { cidade: "Mateus Leme", categoria: "Manutenção", prestadoraIds: ["gm"] },
+
+  { cidade: "Juatuba", categoria: "Ativação", prestadoraIds: ["vwm"] },
+  { cidade: "Juatuba", categoria: "Manutenção", prestadoraIds: ["gm"] },
+
+  { cidade: "Florestal", categoria: "Ativação", prestadoraIds: ["vwm"] },
+  { cidade: "Florestal", categoria: "Manutenção", prestadoraIds: ["gm"] },
+
+  { cidade: "Itaúna", categoria: "Ativação", prestadoraIds: ["gm"] },
+  { cidade: "Itaúna", categoria: "Manutenção", prestadoraIds: ["gm"] },
+
+  { cidade: "Crucilândia", categoria: "Ativação", prestadoraIds: ["fabio"] },
+  { cidade: "Crucilândia", categoria: "Manutenção", prestadoraIds: ["fabio"] },
+
+  { cidade: "Piracema", categoria: "Ativação", prestadoraIds: ["fabio"] },
+  { cidade: "Piracema", categoria: "Manutenção", prestadoraIds: ["fabio"] },
+
+  { cidade: "Itaguara", categoria: "Ativação", prestadoraIds: ["fabio"] },
+  { cidade: "Itaguara", categoria: "Manutenção", prestadoraIds: ["fabio"] },
 ];
 
 // ---------------------------------------------------------------------------
@@ -69,27 +142,24 @@ export function prestadoraNome(id: string | null | undefined): string {
   return PRESTADORAS.find((p) => p.id === id)?.nome ?? id;
 }
 
-/**
- * Sugere a prestadora para uma cidade + tipo de OS, conforme REGRAS_SUGESTAO.
- * Retorna o id da prestadora ou null se nenhuma regra casar.
- */
-export function sugerirPrestadora(
-  cidade: string,
-  tipo: string
-): string | null {
-  const c = normalize(cidade);
+/** Descobre a categoria a partir de um tipo de OS (ou null se não encontrar). */
+export function categoriaDoTipo(tipo: string | null | undefined): string | null {
+  if (!tipo) return null;
   const t = normalize(tipo);
-  if (!c) return null;
+  return CATEGORIAS.find((c) => c.tipos.some((x) => normalize(x) === t))?.nome ?? null;
+}
 
-  // 1) Regra específica de cidade + tipo
-  const exata = REGRAS_SUGESTAO.find(
-    (r) => normalize(r.cidade) === c && r.tipo && normalize(r.tipo) === t
+/**
+ * Sugere prestadoras para uma cidade + categoria (a primeira é a preferida).
+ * Retorna lista vazia se não houver regra.
+ */
+export function sugerirPrestadoras(cidade: string, categoria: string): string[] {
+  const c = normalize(cidade);
+  const cat = normalize(categoria);
+  if (!c || !cat) return [];
+  return (
+    REGRAS_SUGESTAO.find(
+      (r) => normalize(r.cidade) === c && normalize(r.categoria) === cat
+    )?.prestadoraIds ?? []
   );
-  if (exata) return exata.prestadoraId;
-
-  // 2) Regra coringa de cidade (sem tipo ou tipo "*")
-  const coringa = REGRAS_SUGESTAO.find(
-    (r) => normalize(r.cidade) === c && (!r.tipo || r.tipo === "*")
-  );
-  return coringa?.prestadoraId ?? null;
 }

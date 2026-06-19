@@ -4,13 +4,18 @@ import { useAuth } from "@/auth/AuthContext";
 import { STATUS_LABELS } from "@/lib/utils";
 import { parseCliente, formatCliente } from "@/lib/utils";
 import {
+  CATEGORIAS,
+  CIDADES,
   PRESTADORAS,
-  REGRAS_SUGESTAO,
-  TIPOS_OS,
+  categoriaDoTipo,
   prestadoraNome,
-  sugerirPrestadora,
+  sugerirPrestadoras,
 } from "@/config/prestadoras";
 import type { ServiceOrder } from "@/lib/types";
+
+function tiposDaCategoria(categoria: string): string[] {
+  return CATEGORIAS.find((c) => c.nome === categoria)?.tipos ?? [];
+}
 
 export function OrderFormModal({
   order,
@@ -27,8 +32,13 @@ export function OrderFormModal({
   const [cliente, setCliente] = useState(
     order ? formatCliente(order.client_code, order.client_name) : ""
   );
-  const [tipo, setTipo] = useState(order?.tipo ?? TIPOS_OS[0] ?? "");
-  const [cidade, setCidade] = useState(order?.cidade ?? "");
+  const [categoria, setCategoria] = useState(
+    (order && categoriaDoTipo(order.tipo)) || CATEGORIAS[0].nome
+  );
+  const [tipo, setTipo] = useState(
+    order?.tipo ?? CATEGORIAS[0].tipos[0] ?? ""
+  );
+  const [cidade, setCidade] = useState(order?.cidade ?? CIDADES[0] ?? "");
   const [openedAt, setOpenedAt] = useState(
     order?.opened_at ?? new Date().toISOString().slice(0, 10)
   );
@@ -41,28 +51,32 @@ export function OrderFormModal({
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
 
-  // Cidades conhecidas para o datalist
-  const cidades = useMemo(
-    () => Array.from(new Set(REGRAS_SUGESTAO.map((r) => r.cidade))),
-    []
-  );
+  const tipos = useMemo(() => tiposDaCategoria(categoria), [categoria]);
 
-  // Sugestão automática de prestadora a partir de cidade + tipo.
-  const sugestao = useMemo(
-    () => sugerirPrestadora(cidade, tipo),
-    [cidade, tipo]
+  // Sugestão de prestadoras a partir de cidade + categoria.
+  const sugestoes = useMemo(
+    () => sugerirPrestadoras(cidade, categoria),
+    [cidade, categoria]
   );
   const lastSuggestion = useRef<string | null>(order?.prestadora_id ?? null);
 
+  // Ao trocar de categoria, garante que o tipo pertença a ela.
+  function handleCategoria(novaCategoria: string) {
+    setCategoria(novaCategoria);
+    const novos = tiposDaCategoria(novaCategoria);
+    if (!novos.includes(tipo)) setTipo(novos[0] ?? "");
+  }
+
   useEffect(() => {
-    // Preenche com a sugestão se o usuário ainda não escolheu manualmente
-    // (ou se o valor atual era a sugestão anterior).
-    if (sugestao && (prestadoraId === "" || prestadoraId === lastSuggestion.current)) {
-      setPrestadoraId(sugestao);
+    // Preenche com a sugestão preferida se o usuário ainda não escolheu
+    // manualmente (ou se o valor atual era a sugestão anterior).
+    const preferida = sugestoes[0] ?? "";
+    if (preferida && (prestadoraId === "" || prestadoraId === lastSuggestion.current)) {
+      setPrestadoraId(preferida);
     }
-    lastSuggestion.current = sugestao;
+    lastSuggestion.current = preferida || null;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sugestao]);
+  }, [sugestoes]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -129,6 +143,21 @@ export function OrderFormModal({
 
           <div className="grid grid-cols-2 gap-4">
             <div>
+              <label className="label">Categoria</label>
+              <select
+                className="input"
+                value={categoria}
+                onChange={(e) => handleCategoria(e.target.value)}
+                required
+              >
+                {CATEGORIAS.map((c) => (
+                  <option key={c.nome} value={c.nome}>
+                    {c.nome}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
               <label className="label">Tipo de OS</label>
               <select
                 className="input"
@@ -136,28 +165,29 @@ export function OrderFormModal({
                 onChange={(e) => setTipo(e.target.value)}
                 required
               >
-                {TIPOS_OS.map((t) => (
+                {tipos.map((t) => (
                   <option key={t} value={t}>
                     {t}
                   </option>
                 ))}
               </select>
             </div>
-            <div>
-              <label className="label">Cidade</label>
-              <input
-                className="input"
-                list="cidades-list"
-                value={cidade}
-                onChange={(e) => setCidade(e.target.value)}
-                required
-              />
-              <datalist id="cidades-list">
-                {cidades.map((c) => (
-                  <option key={c} value={c} />
-                ))}
-              </datalist>
-            </div>
+          </div>
+
+          <div>
+            <label className="label">Cidade</label>
+            <select
+              className="input"
+              value={cidade}
+              onChange={(e) => setCidade(e.target.value)}
+              required
+            >
+              {CIDADES.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </select>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
@@ -195,19 +225,25 @@ export function OrderFormModal({
                 </option>
               ))}
             </select>
-            {sugestao && (
+            {sugestoes.length > 0 && (
               <p className="mt-1 text-xs text-gray-500">
-                Sugestão para {cidade || "esta cidade"} / {tipo}:{" "}
-                <strong>{prestadoraNome(sugestao)}</strong>
-                {prestadoraId !== sugestao && (
-                  <button
-                    type="button"
-                    className="ml-2 text-brand-600 hover:underline"
-                    onClick={() => setPrestadoraId(sugestao)}
-                  >
-                    usar sugestão
-                  </button>
-                )}
+                Sugestão para {cidade} / {categoria}:{" "}
+                {sugestoes.map((id, i) => (
+                  <span key={id}>
+                    {i > 0 && " ou "}
+                    <button
+                      type="button"
+                      className={`hover:underline ${
+                        prestadoraId === id
+                          ? "font-semibold text-brand-700"
+                          : "text-brand-600"
+                      }`}
+                      onClick={() => setPrestadoraId(id)}
+                    >
+                      {prestadoraNome(id)}
+                    </button>
+                  </span>
+                ))}
               </p>
             )}
           </div>

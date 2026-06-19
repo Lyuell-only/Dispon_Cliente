@@ -10,7 +10,7 @@ import {
   formatDateTime,
   formatCliente,
 } from "@/lib/utils";
-import { prestadoraNome } from "@/config/prestadoras";
+import { categoriaDoTipo, prestadoraNome } from "@/config/prestadoras";
 import { OrderFormModal } from "@/components/OrderFormModal";
 import type { Comment, ServiceOrder } from "@/lib/types";
 
@@ -108,7 +108,10 @@ export default function OrdemDetalhePage() {
             {formatCliente(order.client_code, order.client_name)}
           </h1>
           <p className="mt-1 text-sm text-gray-500">
-            {order.cidade} · {order.tipo}
+            {order.cidade} ·{" "}
+            {categoriaDoTipo(order.tipo)
+              ? `${categoriaDoTipo(order.tipo)} · ${order.tipo}`
+              : order.tipo}
           </p>
         </div>
         {isManager && (

@@ -4,7 +4,7 @@ import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/auth/AuthContext";
 import { canManageOrders } from "@/lib/permissions";
 import { STATUS_LABELS, STATUS_STYLES, formatDate, formatCliente } from "@/lib/utils";
-import { prestadoraNome } from "@/config/prestadoras";
+import { categoriaDoTipo, prestadoraNome } from "@/config/prestadoras";
 import { OrderFormModal } from "@/components/OrderFormModal";
 import type { ServiceOrder } from "@/lib/types";
 
@@ -41,7 +41,8 @@ export default function OrdensPage() {
         o.client_name.toLowerCase().includes(q) ||
         (o.client_code ?? "").includes(q) ||
         o.cidade.toLowerCase().includes(q) ||
-        o.tipo.toLowerCase().includes(q);
+        o.tipo.toLowerCase().includes(q) ||
+        (categoriaDoTipo(o.tipo) ?? "").toLowerCase().includes(q);
       return matchStatus && matchSearch;
     });
   }, [orders, search, statusFilter]);
@@ -106,7 +107,14 @@ export default function OrdensPage() {
                       {formatCliente(o.client_code, o.client_name)}
                     </Link>
                   </td>
-                  <td className="px-5 py-3 text-gray-600">{o.tipo}</td>
+                  <td className="px-5 py-3 text-gray-600">
+                    {o.tipo}
+                    {categoriaDoTipo(o.tipo) && (
+                      <span className="block text-xs text-gray-400">
+                        {categoriaDoTipo(o.tipo)}
+                      </span>
+                    )}
+                  </td>
                   <td className="px-5 py-3 text-gray-600">{o.cidade}</td>
                   <td className="px-5 py-3 text-gray-600">
                     {prestadoraNome(o.prestadora_id)}
