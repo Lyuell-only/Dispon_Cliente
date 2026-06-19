@@ -55,13 +55,6 @@ export default function OrdemDetalhePage() {
     else alert(error.message);
   }
 
-  // Conclui a ordem, marcando atraso se já passou da data de disponibilidade.
-  function concluir() {
-    const disp = order?.availability_at;
-    const atrasada =
-      !!disp && new Date() > new Date(`${disp}T23:59:59`);
-    changeStatus(atrasada ? "CONCLUIDA_ATRASO" : "CONCLUIDA");
-  }
 
   async function addComment(e: React.FormEvent) {
     e.preventDefault();
@@ -233,7 +226,7 @@ export default function OrdemDetalhePage() {
               {!CONCLUDED_STATUSES.includes(order.status) && (
                 <button
                   className="btn w-full bg-green-600 text-white hover:bg-green-700"
-                  onClick={concluir}
+                  onClick={() => changeStatus("CONCLUIDA")}
                 >
                   ✓ Concluir
                 </button>
@@ -256,6 +249,23 @@ export default function OrdemDetalhePage() {
                     Marcar como não realizada
                   </button>
                 )}
+              {/* Após concluída, permite marcar/desmarcar "após dispo" */}
+              {order.status === "CONCLUIDA" && (
+                <button
+                  className="btn-secondary w-full"
+                  onClick={() => changeStatus("CONCLUIDA_ATRASO")}
+                >
+                  Marcar como concluída após dispo
+                </button>
+              )}
+              {order.status === "CONCLUIDA_ATRASO" && (
+                <button
+                  className="btn-secondary w-full"
+                  onClick={() => changeStatus("CONCLUIDA")}
+                >
+                  Marcar como concluída (no prazo)
+                </button>
+              )}
               {order.status !== "AGUARDANDO" && (
                 <button
                   className="btn-secondary w-full"
@@ -268,8 +278,8 @@ export default function OrdemDetalhePage() {
               )}
             </div>
             <p className="mt-3 text-xs text-gray-400">
-              Ao concluir, se já tiver passado da data de disponibilidade, a
-              ordem é marcada como “Concluída após a data”.
+              “Concluída após dispo” pode ser marcada aqui ou pela edição da
+              ordem, depois de concluída.
             </p>
           </div>
         </div>

@@ -5,7 +5,7 @@ export const STATUS_LABELS: Record<OrderStatus, string> = {
   PENDENTE: "Pendente",
   NAO_REALIZADA: "Não realizada",
   CONCLUIDA: "Concluída",
-  CONCLUIDA_ATRASO: "Concluída após a data",
+  CONCLUIDA_ATRASO: "Concluída após dispo",
 };
 
 export const STATUS_STYLES: Record<OrderStatus, string> = {

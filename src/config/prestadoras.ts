@@ -37,6 +37,7 @@ export const PRESTADORAS: Prestadora[] = [
   { id: "andrade", nome: "Andrade Telecom" },
   { id: "pap", nome: "PAP Serviços" },
   { id: "gleison", nome: "Gleison Telecom" },
+  { id: "clt", nome: "CLT (técnico interno)" },
 ];
 
 // ---------------------------------------------------------------------------
