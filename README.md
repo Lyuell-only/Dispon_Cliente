@@ -1,92 +1,97 @@
 # Dispon Cliente — Painel de Disponibilidade
 
-Painel de controle para registrar **clientes**, **ordens de serviço**,
-**data de abertura** e **data de disponibilidade**, com login e permissões
-por perfil.
+Painel para registrar **ordens de serviço** (cliente, tipo, cidade, datas e
+observação), com **sugestão automática da prestadora** por cidade + tipo, login
+e permissões por perfil.
+
+Arquitetura: **SPA estática (Vite + React)** hospedada no **GitHub Pages**, com
+**Supabase** (Postgres + Auth + RLS) como backend.
 
 ## Perfis e permissões
 
-| Perfil       | Permissões                                                                 |
-| ------------ | -------------------------------------------------------------------------- |
-| `ADMIN`      | Controle total: usuários, clientes e ordens de serviço.                    |
-| `SUPERVISOR` | Criar, editar e apagar ordens de serviço e clientes.                       |
-| `EMPRESA`    | Visualizar e comentar **apenas** as ordens do próprio cliente; marcar status (ex.: concluída). |
+| Perfil       | Permissões                                                                       |
+| ------------ | -------------------------------------------------------------------------------- |
+| `ADMIN`      | Controle total: ordens, status e usuários.                                       |
+| `SUPERVISOR` | Criar, editar e apagar ordens de serviço.                                        |
+| `EMPRESA`    | Ver e comentar **apenas** as OS encaminhadas à sua prestadora; alterar o status (ex.: marcar como concluída). |
 
-## Stack
+O escopo da EMPRESA é garantido no banco via **Row Level Security** — um usuário
+empresa não acessa OS de outra prestadora nem por requisição direta.
 
-- **Next.js 14** (App Router, TypeScript)
-- **Prisma** + **PostgreSQL**
-- **NextAuth** (login por e-mail/senha, sessão JWT)
-- **Tailwind CSS**
-- **Zod** para validação
+## Como funciona o registro de OS
 
-## Como rodar localmente
+- O cliente **não é cadastrado**: digite código + nome no mesmo campo, no formato
+  `(231232) CLIENTE TALTALTAL` (o sistema separa código e nome automaticamente).
+- Campos da OS: **tipo**, **cidade**, **data de abertura**, **data de
+  disponibilidade**, **observação** e **prestadora**.
+- A **prestadora** é sugerida automaticamente conforme a cidade + tipo (regras em
+  `src/config/prestadoras.ts`). Admin e supervisor podem trocar para qualquer
+  prestadora.
 
-1. Instale as dependências:
+## Configurar as prestadoras e regras
 
-   ```bash
-   npm install
+Edite [`src/config/prestadoras.ts`](src/config/prestadoras.ts):
+
+- `PRESTADORAS` — lista de empresas que recebem as OS.
+- `REGRAS_SUGESTAO` — mapeia cidade (+ tipo opcional) → prestadora sugerida.
+- `TIPOS_OS` — tipos disponíveis no formulário.
+
+Depois de editar, basta publicar (o deploy é automático).
+
+## Configurar o Supabase
+
+1. Crie um projeto grátis em https://supabase.com.
+2. No **SQL Editor**, rode o conteúdo de [`supabase/schema.sql`](supabase/schema.sql).
+3. Em **Settings → API**, copie a **URL** e a **anon key**.
+4. Crie seu usuário (pela tela de login do app ou em **Authentication → Users**).
+5. Promova-o a admin no **SQL Editor**:
+
+   ```sql
+   update public.profiles set role = 'ADMIN'
+   where id = (select id from auth.users where email = 'voce@exemplo.com');
    ```
 
-2. Configure o ambiente — copie `.env.example` para `.env` e ajuste:
+> Opcional: desative a confirmação de e-mail em **Authentication → Providers →
+> Email** para facilitar os testes.
 
-   ```bash
-   cp .env.example .env
-   # edite DATABASE_URL e NEXTAUTH_SECRET
-   ```
+## Rodar localmente
 
-   Gere um segredo:
+```bash
+cp .env.example .env     # preencha VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY
+npm install
+npm run dev
+```
 
-   ```bash
-   openssl rand -base64 32
-   ```
+## Publicar no GitHub Pages
 
-3. Crie o schema no banco e popule os dados iniciais:
+1. Em **Settings → Pages**, defina **Source = GitHub Actions**.
+2. Em **Settings → Secrets and variables → Actions**, crie os secrets:
+   - `VITE_SUPABASE_URL`
+   - `VITE_SUPABASE_ANON_KEY`
+3. Faça push na branch `main`. O workflow
+   [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml) builda e publica.
 
-   ```bash
-   npm run db:push
-   npm run db:seed
-   ```
+O site ficará em `https://<seu-usuario>.github.io/dispon_cliente/`.
 
-4. Inicie o servidor de desenvolvimento:
-
-   ```bash
-   npm run dev
-   ```
-
-   Acesse http://localhost:3000
-
-## Usuários de teste (criados pelo seed)
-
-| E-mail                     | Senha       | Perfil     |
-| -------------------------- | ----------- | ---------- |
-| admin@dispon.local         | admin123    | ADMIN      |
-| supervisor@dispon.local    | super123    | SUPERVISOR |
-| empresa@dispon.local       | empresa123  | EMPRESA    |
-
-> Altere essas credenciais antes de ir para produção.
+> O `base` do Vite está como `/dispon_cliente/` (nome do repositório). Se você
+> renomear o repositório, ajuste `base` em `vite.config.ts`.
 
 ## Estrutura
 
 ```
-prisma/
-  schema.prisma        # Modelos: User, Client, ServiceOrder, Comment
-  seed.ts              # Dados iniciais
+supabase/schema.sql        # Tabelas, RLS, funções e trigger
 src/
-  app/
-    api/               # Route handlers (auth, clientes, ordens, comentários, usuários)
-    dashboard/         # Páginas protegidas (visão geral, ordens, clientes, usuários)
-    login/             # Tela de login
-  components/          # Sidebar, modais e providers
-  lib/                 # prisma, auth, permissões, validação, utils
+  config/prestadoras.ts    # Prestadoras + regras de sugestão (edite aqui)
+  lib/                     # supabase, tipos, permissões, utils
+  auth/AuthContext.tsx     # Sessão + perfil
+  components/              # Layout, modal de OS
+  pages/                   # Login, Dashboard, Ordens, OrdemDetalhe, Usuarios
+.github/workflows/deploy.yml
 ```
 
-## Scripts
+## Observações de segurança
 
-| Script             | Descrição                              |
-| ------------------ | -------------------------------------- |
-| `npm run dev`      | Servidor de desenvolvimento            |
-| `npm run build`    | Gera o Prisma client e o build de prod |
-| `npm run db:push`  | Aplica o schema no banco               |
-| `npm run db:seed`  | Popula dados iniciais                  |
-| `npm run db:studio`| Abre o Prisma Studio                   |
+- A **anon key** é pública (vai no build estático) — isso é esperado. A proteção
+  real dos dados é feita pelas políticas de **RLS** no Supabase.
+- A troca de status passa pela função `set_order_status` (SECURITY DEFINER), que
+  valida a permissão do usuário no servidor.

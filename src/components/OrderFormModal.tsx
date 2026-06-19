@@ -1,71 +1,105 @@
-"use client";
-
-import { useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/auth/AuthContext";
 import { STATUS_LABELS } from "@/lib/utils";
-
-type Client = { id: string; name: string };
-
-export type OrderFormInitial = {
-  id?: string;
-  title?: string;
-  type?: string;
-  description?: string | null;
-  clientId?: string;
-  status?: string;
-  openedAt?: string;
-  availabilityAt?: string;
-};
+import { parseCliente, formatCliente } from "@/lib/utils";
+import {
+  PRESTADORAS,
+  REGRAS_SUGESTAO,
+  TIPOS_OS,
+  prestadoraNome,
+  sugerirPrestadora,
+} from "@/config/prestadoras";
+import type { ServiceOrder } from "@/lib/types";
 
 export function OrderFormModal({
-  clients,
-  initial = {},
+  order,
   onClose,
   onSaved,
 }: {
-  clients: Client[];
-  initial?: OrderFormInitial;
+  order?: ServiceOrder | null;
   onClose: () => void;
   onSaved: () => void;
 }) {
-  const isEdit = Boolean(initial.id);
-  const [title, setTitle] = useState(initial.title ?? "");
-  const [type, setType] = useState(initial.type ?? "");
-  const [description, setDescription] = useState(initial.description ?? "");
-  const [clientId, setClientId] = useState(initial.clientId ?? "");
-  const [status, setStatus] = useState(initial.status ?? "ABERTA");
-  const [openedAt, setOpenedAt] = useState(initial.openedAt ?? "");
-  const [availabilityAt, setAvailabilityAt] = useState(initial.availabilityAt ?? "");
+  const { session } = useAuth();
+  const isEdit = Boolean(order);
+
+  const [cliente, setCliente] = useState(
+    order ? formatCliente(order.client_code, order.client_name) : ""
+  );
+  const [tipo, setTipo] = useState(order?.tipo ?? TIPOS_OS[0] ?? "");
+  const [cidade, setCidade] = useState(order?.cidade ?? "");
+  const [openedAt, setOpenedAt] = useState(
+    order?.opened_at ?? new Date().toISOString().slice(0, 10)
+  );
+  const [availabilityAt, setAvailabilityAt] = useState(
+    order?.availability_at ?? ""
+  );
+  const [observacao, setObservacao] = useState(order?.observacao ?? "");
+  const [status, setStatus] = useState(order?.status ?? "ABERTA");
+  const [prestadoraId, setPrestadoraId] = useState(order?.prestadora_id ?? "");
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
+
+  // Cidades conhecidas para o datalist
+  const cidades = useMemo(
+    () => Array.from(new Set(REGRAS_SUGESTAO.map((r) => r.cidade))),
+    []
+  );
+
+  // Sugestão automática de prestadora a partir de cidade + tipo.
+  const sugestao = useMemo(
+    () => sugerirPrestadora(cidade, tipo),
+    [cidade, tipo]
+  );
+  const lastSuggestion = useRef<string | null>(order?.prestadora_id ?? null);
+
+  useEffect(() => {
+    // Preenche com a sugestão se o usuário ainda não escolheu manualmente
+    // (ou se o valor atual era a sugestão anterior).
+    if (sugestao && (prestadoraId === "" || prestadoraId === lastSuggestion.current)) {
+      setPrestadoraId(sugestao);
+    }
+    lastSuggestion.current = sugestao;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sugestao]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
     setSaving(true);
 
+    const { code, name } = parseCliente(cliente);
+    if (!name) {
+      setError("Informe o cliente.");
+      setSaving(false);
+      return;
+    }
+
     const payload = {
-      title,
-      type,
-      description,
-      clientId,
+      client_code: code,
+      client_name: name,
+      tipo,
+      cidade: cidade.trim(),
+      prestadora_id: prestadoraId || null,
+      observacao: observacao.trim() || null,
       status,
-      openedAt: openedAt || null,
-      availabilityAt: availabilityAt || null,
+      opened_at: openedAt || null,
+      availability_at: availabilityAt || null,
     };
 
-    const res = await fetch(
-      isEdit ? `/api/ordens/${initial.id}` : "/api/ordens",
-      {
-        method: isEdit ? "PUT" : "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      }
-    );
+    const { error } = isEdit
+      ? await supabase
+          .from("service_orders")
+          .update({ ...payload, updated_at: new Date().toISOString() })
+          .eq("id", order!.id)
+      : await supabase
+          .from("service_orders")
+          .insert({ ...payload, created_by: session?.user.id });
 
     setSaving(false);
-    if (!res.ok) {
-      const data = await res.json().catch(() => ({}));
-      setError(data.error ?? "Erro ao salvar.");
+    if (error) {
+      setError(error.message);
       return;
     }
     onSaved();
@@ -80,41 +114,49 @@ export function OrderFormModal({
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="label">Título</label>
+            <label className="label">Cliente</label>
             <input
               className="input"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
+              value={cliente}
+              onChange={(e) => setCliente(e.target.value)}
+              placeholder="(231232) CLIENTE TALTALTAL"
               required
             />
+            <p className="mt-1 text-xs text-gray-400">
+              Formato: (código) NOME DO CLIENTE
+            </p>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="label">Tipo de ordem</label>
-              <input
-                className="input"
-                value={type}
-                onChange={(e) => setType(e.target.value)}
-                placeholder="Ex.: Manutenção, Instalação..."
-                required
-              />
-            </div>
-            <div>
-              <label className="label">Cliente</label>
+              <label className="label">Tipo de OS</label>
               <select
                 className="input"
-                value={clientId}
-                onChange={(e) => setClientId(e.target.value)}
+                value={tipo}
+                onChange={(e) => setTipo(e.target.value)}
                 required
               >
-                <option value="">Selecione...</option>
-                {clients.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
+                {TIPOS_OS.map((t) => (
+                  <option key={t} value={t}>
+                    {t}
                   </option>
                 ))}
               </select>
+            </div>
+            <div>
+              <label className="label">Cidade</label>
+              <input
+                className="input"
+                list="cidades-list"
+                value={cidade}
+                onChange={(e) => setCidade(e.target.value)}
+                required
+              />
+              <datalist id="cidades-list">
+                {cidades.map((c) => (
+                  <option key={c} value={c} />
+                ))}
+              </datalist>
             </div>
           </div>
 
@@ -140,11 +182,44 @@ export function OrderFormModal({
           </div>
 
           <div>
+            <label className="label">Prestadora (encaminhar para)</label>
+            <select
+              className="input"
+              value={prestadoraId}
+              onChange={(e) => setPrestadoraId(e.target.value)}
+            >
+              <option value="">Não encaminhada</option>
+              {PRESTADORAS.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.nome}
+                </option>
+              ))}
+            </select>
+            {sugestao && (
+              <p className="mt-1 text-xs text-gray-500">
+                Sugestão para {cidade || "esta cidade"} / {tipo}:{" "}
+                <strong>{prestadoraNome(sugestao)}</strong>
+                {prestadoraId !== sugestao && (
+                  <button
+                    type="button"
+                    className="ml-2 text-brand-600 hover:underline"
+                    onClick={() => setPrestadoraId(sugestao)}
+                  >
+                    usar sugestão
+                  </button>
+                )}
+              </p>
+            )}
+          </div>
+
+          <div>
             <label className="label">Status</label>
             <select
               className="input"
               value={status}
-              onChange={(e) => setStatus(e.target.value)}
+              onChange={(e) =>
+                setStatus(e.target.value as ServiceOrder["status"])
+              }
             >
               {Object.entries(STATUS_LABELS).map(([value, label]) => (
                 <option key={value} value={value}>
@@ -155,11 +230,11 @@ export function OrderFormModal({
           </div>
 
           <div>
-            <label className="label">Descrição</label>
+            <label className="label">Observação (info adicional)</label>
             <textarea
               className="input min-h-[80px]"
-              value={description ?? ""}
-              onChange={(e) => setDescription(e.target.value)}
+              value={observacao}
+              onChange={(e) => setObservacao(e.target.value)}
             />
           </div>
 
