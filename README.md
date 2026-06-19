@@ -71,10 +71,11 @@ npm run dev
 3. Faça push na branch `main`. O workflow
    [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml) builda e publica.
 
-O site ficará em `https://<seu-usuario>.github.io/dispon_cliente/`.
+O site ficará em `https://<seu-usuario>.github.io/Dispon_Cliente/`.
 
-> O `base` do Vite está como `/dispon_cliente/` (nome do repositório). Se você
-> renomear o repositório, ajuste `base` em `vite.config.ts`.
+> O `base` do Vite está como `/Dispon_Cliente/` (nome do repositório, com o mesmo
+> case). O caminho do GitHub Pages diferencia maiúsculas de minúsculas — se você
+> renomear o repositório, ajuste `base` em `vite.config.ts` exatamente igual.
 
 ## Estrutura
 
