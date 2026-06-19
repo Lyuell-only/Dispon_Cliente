@@ -19,6 +19,7 @@ export function Layout() {
   const links = [
     { to: "/", label: "Visão geral", end: true, show: true },
     { to: "/ordens", label: "Ordens de serviço", show: true },
+    { to: "/relatorios", label: "Relatórios", show: true },
     { to: "/usuarios", label: "Usuários", show: canManageUsers(profile.role) },
   ].filter((l) => l.show);
 

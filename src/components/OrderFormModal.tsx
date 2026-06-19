@@ -46,7 +46,7 @@ export function OrderFormModal({
     order?.availability_at ?? ""
   );
   const [observacao, setObservacao] = useState(order?.observacao ?? "");
-  const [status, setStatus] = useState(order?.status ?? "ABERTA");
+  const [status, setStatus] = useState(order?.status ?? "AGUARDANDO");
   const [prestadoraId, setPrestadoraId] = useState(order?.prestadora_id ?? "");
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);

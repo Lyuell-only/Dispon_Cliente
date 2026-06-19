@@ -1,6 +1,11 @@
 export type Role = "ADMIN" | "SUPERVISOR" | "EMPRESA";
 
-export type OrderStatus = "ABERTA" | "EM_ANDAMENTO" | "CONCLUIDA" | "CANCELADA";
+export type OrderStatus =
+  | "AGUARDANDO"
+  | "PENDENTE"
+  | "NAO_REALIZADA"
+  | "CONCLUIDA"
+  | "CONCLUIDA_ATRASO";
 
 export type Profile = {
   id: string;

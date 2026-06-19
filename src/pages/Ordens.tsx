@@ -3,7 +3,15 @@ import { Link } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/auth/AuthContext";
 import { canManageOrders } from "@/lib/permissions";
-import { STATUS_LABELS, STATUS_STYLES, formatDate, formatCliente } from "@/lib/utils";
+import {
+  STATUS_LABELS,
+  STATUS_STYLES,
+  ACTIVE_STATUSES,
+  CONCLUDED_STATUSES,
+  formatDate,
+  formatCliente,
+} from "@/lib/utils";
+import type { OrderStatus } from "@/lib/types";
 import { categoriaDoTipo, prestadoraNome } from "@/config/prestadoras";
 import { OrderFormModal } from "@/components/OrderFormModal";
 import type { ServiceOrder } from "@/lib/types";
@@ -15,7 +23,8 @@ export default function OrdensPage() {
   const [orders, setOrders] = useState<ServiceOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState("ALL");
+  // Por padrão mostra apenas as ativas (aguardando, pendente, não realizada).
+  const [statusFilter, setStatusFilter] = useState("ATIVAS");
   const [showForm, setShowForm] = useState(false);
 
   async function load() {
@@ -34,7 +43,14 @@ export default function OrdensPage() {
 
   const filtered = useMemo(() => {
     return orders.filter((o) => {
-      const matchStatus = statusFilter === "ALL" || o.status === statusFilter;
+      const matchStatus =
+        statusFilter === "ALL"
+          ? true
+          : statusFilter === "ATIVAS"
+          ? ACTIVE_STATUSES.includes(o.status)
+          : statusFilter === "HISTORICO"
+          ? CONCLUDED_STATUSES.includes(o.status)
+          : o.status === statusFilter;
       const q = search.toLowerCase();
       const matchSearch =
         !q ||
@@ -66,16 +82,22 @@ export default function OrdensPage() {
           onChange={(e) => setSearch(e.target.value)}
         />
         <select
-          className="input max-w-[180px]"
+          className="input max-w-[260px]"
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
         >
-          <option value="ALL">Todos os status</option>
-          {Object.entries(STATUS_LABELS).map(([value, label]) => (
-            <option key={value} value={value}>
-              {label}
-            </option>
-          ))}
+          <option value="ATIVAS">Ativas (aguardando, pendente, não realizada)</option>
+          <option value="HISTORICO">Histórico (concluídas)</option>
+          <option value="ALL">Todas</option>
+          <optgroup label="Por status">
+            {(Object.entries(STATUS_LABELS) as [OrderStatus, string][]).map(
+              ([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              )
+            )}
+          </optgroup>
         </select>
       </div>
 

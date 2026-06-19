@@ -29,8 +29,8 @@ create table if not exists public.service_orders (
   cidade         text not null,
   prestadora_id  text,
   observacao     text,
-  status         text not null default 'ABERTA'
-                 check (status in ('ABERTA', 'EM_ANDAMENTO', 'CONCLUIDA', 'CANCELADA')),
+  status         text not null default 'AGUARDANDO'
+                 check (status in ('AGUARDANDO', 'PENDENTE', 'NAO_REALIZADA', 'CONCLUIDA', 'CONCLUIDA_ATRASO')),
   opened_at      date not null default current_date,
   availability_at date,
   created_by     uuid references public.profiles (id) on delete set null,
@@ -97,7 +97,7 @@ declare
   v_role text;
   v_prest text;
 begin
-  if p_status not in ('ABERTA', 'EM_ANDAMENTO', 'CONCLUIDA', 'CANCELADA') then
+  if p_status not in ('AGUARDANDO', 'PENDENTE', 'NAO_REALIZADA', 'CONCLUIDA', 'CONCLUIDA_ATRASO') then
     raise exception 'Status inválido';
   end if;
 

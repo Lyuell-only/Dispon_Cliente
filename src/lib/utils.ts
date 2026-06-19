@@ -1,18 +1,37 @@
 import type { OrderStatus } from "./types";
 
 export const STATUS_LABELS: Record<OrderStatus, string> = {
-  ABERTA: "Aberta",
-  EM_ANDAMENTO: "Em andamento",
+  AGUARDANDO: "Aguardando disponibilidade",
+  PENDENTE: "Pendente",
+  NAO_REALIZADA: "Não realizada",
   CONCLUIDA: "Concluída",
-  CANCELADA: "Cancelada",
+  CONCLUIDA_ATRASO: "Concluída após a data",
 };
 
 export const STATUS_STYLES: Record<OrderStatus, string> = {
-  ABERTA: "bg-blue-100 text-blue-700",
-  EM_ANDAMENTO: "bg-amber-100 text-amber-700",
+  AGUARDANDO: "bg-blue-100 text-blue-700",
+  PENDENTE: "bg-amber-100 text-amber-700",
+  NAO_REALIZADA: "bg-red-100 text-red-700",
   CONCLUIDA: "bg-green-100 text-green-700",
-  CANCELADA: "bg-gray-200 text-gray-600",
+  CONCLUIDA_ATRASO: "bg-emerald-100 text-emerald-700",
 };
+
+/** Status "ativos" (ordens em aberto que ainda precisam de ação). */
+export const ACTIVE_STATUSES: OrderStatus[] = [
+  "AGUARDANDO",
+  "PENDENTE",
+  "NAO_REALIZADA",
+];
+
+/** Status de conclusão (vão para o histórico). */
+export const CONCLUDED_STATUSES: OrderStatus[] = [
+  "CONCLUIDA",
+  "CONCLUIDA_ATRASO",
+];
+
+export function isActiveStatus(status: OrderStatus): boolean {
+  return ACTIVE_STATUSES.includes(status);
+}
 
 export function formatDate(date: string | null | undefined): string {
   if (!date) return "—";

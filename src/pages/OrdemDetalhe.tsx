@@ -6,6 +6,7 @@ import { canManageOrders, ROLE_LABELS } from "@/lib/permissions";
 import {
   STATUS_LABELS,
   STATUS_STYLES,
+  CONCLUDED_STATUSES,
   formatDate,
   formatDateTime,
   formatCliente,
@@ -52,6 +53,14 @@ export default function OrdemDetalhePage() {
     });
     if (!error) load();
     else alert(error.message);
+  }
+
+  // Conclui a ordem, marcando atraso se já passou da data de disponibilidade.
+  function concluir() {
+    const disp = order?.availability_at;
+    const atrasada =
+      !!disp && new Date() > new Date(`${disp}T23:59:59`);
+    changeStatus(atrasada ? "CONCLUIDA_ATRASO" : "CONCLUIDA");
   }
 
   async function addComment(e: React.FormEvent) {
@@ -221,31 +230,47 @@ export default function OrdemDetalhePage() {
               Atualize o status desta ordem de serviço.
             </p>
             <div className="space-y-2">
-              {order.status !== "CONCLUIDA" && (
+              {!CONCLUDED_STATUSES.includes(order.status) && (
                 <button
                   className="btn w-full bg-green-600 text-white hover:bg-green-700"
-                  onClick={() => changeStatus("CONCLUIDA")}
+                  onClick={concluir}
                 >
-                  ✓ Marcar como concluída
+                  ✓ Concluir
                 </button>
               )}
-              {order.status !== "EM_ANDAMENTO" && order.status !== "CONCLUIDA" && (
+              {order.status !== "PENDENTE" &&
+                !CONCLUDED_STATUSES.includes(order.status) && (
+                  <button
+                    className="btn-secondary w-full"
+                    onClick={() => changeStatus("PENDENTE")}
+                  >
+                    Marcar como pendente
+                  </button>
+                )}
+              {order.status !== "NAO_REALIZADA" &&
+                !CONCLUDED_STATUSES.includes(order.status) && (
+                  <button
+                    className="btn-secondary w-full"
+                    onClick={() => changeStatus("NAO_REALIZADA")}
+                  >
+                    Marcar como não realizada
+                  </button>
+                )}
+              {order.status !== "AGUARDANDO" && (
                 <button
                   className="btn-secondary w-full"
-                  onClick={() => changeStatus("EM_ANDAMENTO")}
+                  onClick={() => changeStatus("AGUARDANDO")}
                 >
-                  Marcar em andamento
-                </button>
-              )}
-              {order.status === "CONCLUIDA" && (
-                <button
-                  className="btn-secondary w-full"
-                  onClick={() => changeStatus("ABERTA")}
-                >
-                  Reabrir ordem
+                  {CONCLUDED_STATUSES.includes(order.status)
+                    ? "Reabrir (aguardando)"
+                    : "Aguardando disponibilidade"}
                 </button>
               )}
             </div>
+            <p className="mt-3 text-xs text-gray-400">
+              Ao concluir, se já tiver passado da data de disponibilidade, a
+              ordem é marcada como “Concluída após a data”.
+            </p>
           </div>
         </div>
       </div>

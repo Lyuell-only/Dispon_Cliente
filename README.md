@@ -42,6 +42,9 @@ Depois de editar, basta publicar (o deploy é automático).
 
 1. Crie um projeto grátis em https://supabase.com.
 2. No **SQL Editor**, rode o conteúdo de [`supabase/schema.sql`](supabase/schema.sql).
+   - Se você **já tinha rodado** uma versão anterior do schema, rode também a
+     migração [`supabase/migrations/0002_status.sql`](supabase/migrations/0002_status.sql)
+     para atualizar os status das ordens.
 3. Em **Settings → API**, copie a **URL** e a **anon key**.
 4. Crie seu usuário (pela tela de login do app ou em **Authentication → Users**).
 5. Promova-o a admin no **SQL Editor**:
