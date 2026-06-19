@@ -1,0 +1,82 @@
+// Prisma schema para o painel de disponibilidade de clientes
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  SUPERVISOR
+  EMPRESA
+}
+
+enum OrderStatus {
+  ABERTA
+  EM_ANDAMENTO
+  CONCLUIDA
+  CANCELADA
+}
+
+model User {
+  id            String         @id @default(cuid())
+  name          String
+  email         String         @unique
+  password      String
+  role          Role           @default(EMPRESA)
+  // Usuários do tipo EMPRESA são vinculados a um cliente específico
+  clientId      String?
+  client        Client?        @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  createdOrders ServiceOrder[] @relation("CreatedOrders")
+  comments      Comment[]
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+}
+
+model Client {
+  id        String         @id @default(cuid())
+  name      String
+  document  String?        // CNPJ/CPF
+  email     String?
+  phone     String?
+  orders    ServiceOrder[]
+  users     User[]
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+}
+
+model ServiceOrder {
+  id             String      @id @default(cuid())
+  title          String
+  type           String      // Tipo de ordem de serviço
+  description    String?
+  status         OrderStatus @default(ABERTA)
+  openedAt       DateTime    @default(now()) // Data de abertura
+  availabilityAt DateTime?   // Data de disponibilidade
+  clientId       String
+  client         Client      @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  createdById    String?
+  createdBy      User?       @relation("CreatedOrders", fields: [createdById], references: [id], onDelete: SetNull)
+  comments       Comment[]
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  @@index([clientId])
+  @@index([status])
+}
+
+model Comment {
+  id        String       @id @default(cuid())
+  body      String
+  orderId   String
+  order     ServiceOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  authorId  String
+  author    User         @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  createdAt DateTime     @default(now())
+
+  @@index([orderId])
+}
