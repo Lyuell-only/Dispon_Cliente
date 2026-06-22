@@ -7,6 +7,7 @@ import {
   STATUS_LABELS,
   STATUS_STYLES,
   CONCLUDED_STATUSES,
+  getOrderAlert,
   formatDate,
   formatDateTime,
   formatCliente,
@@ -127,6 +128,24 @@ export default function OrdemDetalhePage() {
           </div>
         )}
       </div>
+
+      {profile &&
+        (() => {
+          const alerta = getOrderAlert(order, profile.role);
+          if (!alerta) return null;
+          return (
+            <div
+              className={`mb-6 rounded-lg border p-4 text-sm font-medium ${
+                alerta.level === "danger"
+                  ? "border-red-300 bg-red-50 text-red-800"
+                  : "border-amber-300 bg-amber-50 text-amber-800"
+              }`}
+            >
+              ⚠ {alerta.text} — disponibilidade em{" "}
+              {formatDate(order.availability_at)}.
+            </div>
+          );
+        })()}
 
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="space-y-6 lg:col-span-2">

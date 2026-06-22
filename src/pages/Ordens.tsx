@@ -8,10 +8,16 @@ import {
   STATUS_STYLES,
   ACTIVE_STATUSES,
   CONCLUDED_STATUSES,
+  getOrderAlert,
   formatDate,
   formatCliente,
 } from "@/lib/utils";
 import type { OrderStatus } from "@/lib/types";
+
+const ALERT_STYLES = {
+  warn: "bg-amber-100 text-amber-800",
+  danger: "bg-red-100 text-red-800",
+} as const;
 import { categoriaDoTipo, prestadoraNome } from "@/config/prestadoras";
 import { OrderFormModal } from "@/components/OrderFormModal";
 import type { ServiceOrder } from "@/lib/types";
@@ -122,8 +128,19 @@ export default function OrdensPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {filtered.map((o) => (
-                <tr key={o.id} className="hover:bg-gray-50">
+              {filtered.map((o) => {
+                const alerta = profile ? getOrderAlert(o, profile.role) : null;
+                return (
+                <tr
+                  key={o.id}
+                  className={`hover:bg-gray-50 ${
+                    alerta
+                      ? alerta.level === "danger"
+                        ? "bg-red-50/60"
+                        : "bg-amber-50/60"
+                      : ""
+                  }`}
+                >
                   <td className="px-5 py-3 font-medium text-gray-900">
                     <Link to={`/ordens/${o.id}`} className="hover:text-brand-600">
                       {formatCliente(o.client_code, o.client_name)}
@@ -149,9 +166,17 @@ export default function OrdensPage() {
                     <span className={`badge ${STATUS_STYLES[o.status]}`}>
                       {STATUS_LABELS[o.status]}
                     </span>
+                    {alerta && (
+                      <span
+                        className={`badge mt-1 block w-fit ${ALERT_STYLES[alerta.level]}`}
+                      >
+                        ⚠ {alerta.text}
+                      </span>
+                    )}
                   </td>
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
         )}

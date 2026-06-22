@@ -1,11 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/auth/AuthContext";
 import {
   STATUS_LABELS,
   STATUS_STYLES,
   ACTIVE_STATUSES,
   CONCLUDED_STATUSES,
+  getOrderAlert,
   formatDate,
   formatCliente,
 } from "@/lib/utils";
@@ -13,6 +15,7 @@ import { categoriaDoTipo, prestadoraNome } from "@/config/prestadoras";
 import type { ServiceOrder } from "@/lib/types";
 
 export default function DashboardPage() {
+  const { profile } = useAuth();
   const [orders, setOrders] = useState<ServiceOrder[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -46,6 +49,14 @@ export default function DashboardPage() {
     [orders]
   );
 
+  // Ordens que precisam de atenção segundo a data de disponibilidade + perfil.
+  const alertas = useMemo(() => {
+    if (!profile) return [];
+    return orders
+      .map((o) => ({ o, a: getOrderAlert(o, profile.role) }))
+      .filter((x) => x.a !== null);
+  }, [orders, profile]);
+
   return (
     <div>
       <div className="mb-6 flex items-center justify-between">
@@ -54,6 +65,43 @@ export default function DashboardPage() {
           Ver relatórios
         </Link>
       </div>
+
+      {alertas.length > 0 && (
+        <div className="mb-6 rounded-lg border border-amber-300 bg-amber-50 p-4">
+          <p className="font-semibold text-amber-800">
+            ⚠ {alertas.length} ordem(ns) precisam de atenção
+          </p>
+          <ul className="mt-2 space-y-1">
+            {alertas.slice(0, 6).map(({ o, a }) => (
+              <li key={o.id} className="text-sm">
+                <Link
+                  to={`/ordens/${o.id}`}
+                  className="text-amber-900 hover:underline"
+                >
+                  {formatCliente(o.client_code, o.client_name)} — {o.cidade}
+                </Link>
+                <span
+                  className={
+                    a!.level === "danger"
+                      ? "ml-2 font-medium text-red-700"
+                      : "ml-2 font-medium text-amber-700"
+                  }
+                >
+                  {a!.text} (disp. {formatDate(o.availability_at)})
+                </span>
+              </li>
+            ))}
+          </ul>
+          {alertas.length > 6 && (
+            <Link
+              to="/ordens"
+              className="mt-2 inline-block text-sm font-medium text-amber-800 hover:underline"
+            >
+              ver todas
+            </Link>
+          )}
+        </div>
+      )}
 
       <div className="mb-8 grid grid-cols-2 gap-4 lg:grid-cols-4">
         {cards.map((c) => (

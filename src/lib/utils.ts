@@ -1,4 +1,4 @@
-import type { OrderStatus } from "./types";
+import type { OrderStatus, ServiceOrder, Role } from "./types";
 
 export const STATUS_LABELS: Record<OrderStatus, string> = {
   AGUARDANDO: "Aguardando disponibilidade",
@@ -74,4 +74,49 @@ export function formatCliente(
   name: string
 ): string {
   return code ? `(${code}) ${name}` : name;
+}
+
+/** Data de hoje no formato YYYY-MM-DD (horário local). */
+export function todayISO(): string {
+  const d = new Date();
+  const mes = String(d.getMonth() + 1).padStart(2, "0");
+  const dia = String(d.getDate()).padStart(2, "0");
+  return `${d.getFullYear()}-${mes}-${dia}`;
+}
+
+export type OrderAlert = { level: "warn" | "danger"; text: string };
+
+/**
+ * Calcula o alerta de uma ordem conforme a data de disponibilidade e o perfil:
+ *  - ADMIN/SUPERVISOR: chegou a data e ainda está "Aguardando" (não virou pendente).
+ *  - EMPRESA: está "Pendente" e chegou (ou passou) a data de disponibilidade.
+ * Retorna null quando não há alerta.
+ */
+export function getOrderAlert(
+  order: ServiceOrder,
+  role: Role
+): OrderAlert | null {
+  const disp = order.availability_at;
+  if (!disp) return null;
+
+  const hoje = todayISO();
+  if (disp > hoje) return null; // ainda não chegou a data
+  const passou = disp < hoje;
+
+  if (role === "EMPRESA") {
+    if (order.status === "PENDENTE") {
+      return passou
+        ? { level: "danger", text: "Passou da disponibilidade" }
+        : { level: "warn", text: "Disponível hoje" };
+    }
+    return null;
+  }
+
+  // ADMIN / SUPERVISOR
+  if (order.status === "AGUARDANDO") {
+    return passou
+      ? { level: "danger", text: "Passou da data e ainda aguardando" }
+      : { level: "warn", text: "Disponibilidade hoje, ainda aguardando" };
+  }
+  return null;
 }
